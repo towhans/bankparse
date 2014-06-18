@@ -1,12 +1,12 @@
 ################################################################################
-#  Module: Futu::Format
+#  Module: Format
 ################################################################################
 #  
 #	Module for parsing emails with known format
 #
 #-------------------------------------------------------------------------------
 
-package Futu::Format;
+package Format;
 
 use 5.008008;
 use strict;
@@ -33,9 +33,8 @@ our @EXPORT_OK =
 #-------------------------------------------------------------------------------
 sub Bank {
 	my ($email) = @_;
-	my $from = lc($email->header('From'));
-	my $bank;	
-
+	my $from = lc($email->get('From') || '');
+	my $bank;
 
 	# try to determine format by headers
 	if ($from =~ m/info\@rb.cz/) {
@@ -57,7 +56,7 @@ sub Bank {
 	} else {
 	# try to determine format by content
 		my @parts = $email->parts;
-		my $text = NormalizeText($parts[0]->body_str);
+		my $text = NormalizeText($parts[0]->decoded);
 		if ($text =~ m/dekujeme za vyuziti sluzeb csob/) {
 			$bank = 'CSOB';
 		} elsif ($text =~ m/pripojene dokumenty mohou byt duverne/) {
@@ -165,7 +164,7 @@ sub NormalizeCountry {
 }
 
 #-------------------------------------------------------------------------------
-# Function: _format
+# Function: detect
 #	determines the format of the message.
 #
 # Parameters:
@@ -174,7 +173,7 @@ sub NormalizeCountry {
 # Returns:
 #	$format or undef - see %format for list of formats in specific bank module
 #-------------------------------------------------------------------------------
-sub _format {
+sub detect {
     my ($self) = @_;
 
     my $text  = $self->_mainText;
@@ -191,23 +190,19 @@ sub _format {
 }
 
 #-------------------------------------------------------------------------------
-# Function: parse
+# Function: apply
 #	Parse Email::MIME to transaction notification or
 #
 # Parameters:
-#	$email	- Email::MIME instance
 #	$format	- format of the message
 #
 # Returns:
 #	@array	- array of JSON documents - transaction notifications
 #-------------------------------------------------------------------------------
-sub parse {
-    my ($self, $verbose) = @_;
-    my $f = $self->_format;
-    die "Unknown format" unless $f;
-	print "Format: $f\n" if $verbose;
-   	my $notifications = $self->{module}->{$f}->($self->_mainText);
-	map {$_->{format} = $f unless $_->{format}} @$notifications;
+sub apply {
+    my ($self, $format, $verbose) = @_;
+   	my $notifications = $self->{module}->{$format}->($self->_mainText);
+	map {$_->{format} = $format unless $_->{format}} @$notifications;
 	return $notifications;
 }
 

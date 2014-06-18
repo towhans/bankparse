@@ -1,19 +1,18 @@
 ################################################################################
-#  Module: Futu::Format::FIO
+#  Module: Format::FIO
 ################################################################################
 #
 #	Module for parsing emails from FIO
 #
 #-------------------------------------------------------------------------------
-package Futu::Format::FIO;
+package Format::FIO;
 
 use 5.008008;
 use strict;
 use warnings;
-use base 'Futu::Format';
-use Futu::Format qw/NormalizeText NormalizeAmount IBAN MatchTemplate/;
-use Futu::Const;
-use JSON;
+use base 'Format';
+use Format qw/NormalizeText NormalizeAmount IBAN MatchTemplate/;
+use Const;
 
 ################################################################################
 #	Group: Constructor
@@ -21,7 +20,7 @@ use JSON;
 
 #-------------------------------------------------------------------------------
 # Constructor: new
-#	Creates new Futu::Format::FIO object
+#	Creates new Format::FIO object
 #
 # Parameters:
 #	$email	- Email::MIME instance
@@ -91,7 +90,7 @@ sub Payment_cz_in {
         sender => IBAN( $sender_bank, $sender_account ),
         my_account => IBAN('2010', $account),
         tags     => {
-            how => Futu::Const::HOW_BEZHOTOVOSTNI_PLATBA
+            how => Const::HOW_BEZHOTOVOSTNI_PLATBA
         },
 		vs => $vs,
 		description => $message
@@ -118,7 +117,7 @@ sub Payment_cz_out {
         receiver => IBAN( $receiver_bank, $receiver_account ),
         my_account => IBAN('2010', $account),
         tags     => {
-            how => Futu::Const::HOW_BEZHOTOVOSTNI_PLATBA
+            how => Const::HOW_BEZHOTOVOSTNI_PLATBA
         },
 		vs => $vs
     };
@@ -147,7 +146,7 @@ sub Card_cz {
         balance => { bank_available => NormalizeAmount($balance) },
         my_account => IBAN('2010', $account),
         tags => {
-            how  => Futu::Const::HOW_PLATBA_KARTOU
+            how  => Const::HOW_PLATBA_KARTOU
         }
     };
     return [ $return ];
@@ -161,7 +160,7 @@ sub _mainText {
 	return $self->{main_text} if defined $self->{main_text}; 
     my @parts = $self->{email}->parts;
 
-	$self->{main_text} = NormalizeText($parts[0]->body_str);
+	$self->{main_text} = NormalizeText($parts[0]->decoded);
 	return $self->{main_text};
 }
 

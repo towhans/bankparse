@@ -1,21 +1,20 @@
 ################################################################################
-#  Module: Futu::Format::MBank
+#  Module: Format::MBank
 ################################################################################
 #
 #	Module for parsing emails from MBank
 #
 #-------------------------------------------------------------------------------
-package Futu::Format::MBank;
+package Format::MBank;
 
 use 5.008008;
 use strict;
 use warnings;
-use base 'Futu::Format';
-use Futu::Format qw/NormalizeText NormalizeAmount IBAN MatchTemplate/;
-use Futu::Const;
-use Futu::Mail;
-use JSON;
-use Futu::Re;
+use base 'Format';
+use Format qw/NormalizeText NormalizeAmount IBAN MatchTemplate/;
+use Const;
+use Re;
+use JSON::XS;
 
 ################################################################################
 #	Group: Constructor
@@ -23,7 +22,7 @@ use Futu::Re;
 
 #-------------------------------------------------------------------------------
 # Constructor: new
-#	Creates new Futu::Format::MBank object
+#	Creates new Format::MBank object
 #
 # Parameters:
 #	$email	- Email::MIME instance
@@ -118,12 +117,6 @@ sub Push_cz {
 		} elsif ($message =~ m/^nespravne/) {
 			Ignore();
 		} else {
-		#	Futu::Mail::SendMail(
-		#		'sovicka@futu.cz',
-		#		'Neznamy format dat',
-		#		$message,
-		#		'strix@futu.cz'
-		#	);
 			push( @notifications, {format=>'MBank.error'});
 		}
 		if ($notif) {
@@ -176,8 +169,8 @@ sub Balance {
 				bank_available => NormalizeAmount($available_balance)
 			},
 			tags => {
-				how => Futu::Const::HOW_BEZHOTOVOSTNI_PREVOD,
-				show_in_reports => JSON::true, # this means hide_in_reports, refactoring needed
+				how => Const::HOW_BEZHOTOVOSTNI_PREVOD,
+				show_in_reports => JSON::XS::true, # this means hide_in_reports, refactoring needed
 			},
 		};
 	} else {
@@ -194,8 +187,6 @@ sub Balance {
     return $return;
 }
 
-
-#mBank: Zustatek vypisu VISA CLASSIC CREDIT: 806,00 CZK. Dostup.zust: 69074,00 CZK.
 sub Visa {
     my ($text, $date) = @_;
 
@@ -211,7 +202,7 @@ sub Visa {
         },
         tags => {
             card   => 'VISA CLASSIC CREDIT',
-            how => Futu::Const::HOW_PLATBA_KARTOU
+            how => Const::HOW_PLATBA_KARTOU
         }
     };
     return $return;
@@ -220,10 +211,8 @@ sub Visa {
 sub Card {
     my ($text, $date) = @_;
 
-#mBank: Autorizace karty 08852701: MONEYBOOKERS LONDON. Castka: 806,00 CZK. Dostup.limit: 74194,00 CZK.
-
     my ( $card, $dealer, $amount) =
-      MatchTemplate($text, "autorizace karty (\\d+): (.*) castka: $Futu::Re::amount czk");
+      MatchTemplate($text, "autorizace karty (\\d+): (.*) castka: $Re::amount czk");
 
     my $return = {
         date => $date,
@@ -239,13 +228,12 @@ sub Card {
 #        },
         tags => {
             card   => $card,
-            how => Futu::Const::HOW_PLATBA_KARTOU
+            how => Const::HOW_PLATBA_KARTOU
         }
     };
     return $return;
 }
 
-#mBank: Na Vas ucet 00737698 prislo: 0,04 CZK AV: P?IPS?N? ?ROK?; Dostup.zust: 0,04 CZK
 sub Interest_in {
     my ($text, $date) = @_;
     my ( $receiver_account, $amount, $description )
@@ -259,7 +247,7 @@ sub Interest_in {
         description       => $description,
 		my_account => IBAN('6210', $receiver_account),
         tags => {
-            how => Futu::Const::HOW_BEZHOTOVOSTNI_PRIJEM
+            how => Const::HOW_BEZHOTOVOSTNI_PRIJEM
         }
     };
     return $return;
@@ -282,7 +270,7 @@ sub Payment_in {
         description       => $description,
 		my_account => IBAN('6210', $receiver_account),
         tags => {
-            how => Futu::Const::HOW_BEZHOTOVOSTNI_PRIJEM
+            how => Const::HOW_BEZHOTOVOSTNI_PRIJEM
         }
     };
     return $return;
@@ -304,7 +292,7 @@ sub Payment_out_inkaso {
         receiver => IBAN( $receiver_bank , "$receiver_account" ),
 		my_account => IBAN('6210', $sender_account),
         tags => {
-            how => Futu::Const::HOW_BEZHOTOVOSTNI_PLATBA
+            how => Const::HOW_BEZHOTOVOSTNI_PLATBA
         }
     };
     return $return;
@@ -326,7 +314,7 @@ sub Payment_out {
         description       => $description,
 		my_account => IBAN('6210', $sender_account),
         tags => {
-            how => Futu::Const::HOW_BEZHOTOVOSTNI_PLATBA
+            how => Const::HOW_BEZHOTOVOSTNI_PLATBA
         }
     };
     return $return;
@@ -342,7 +330,7 @@ sub _mainText {
     my ($p1, $p2) = $self->{email}->parts;
 	my ($p3, $p4) = $p1->parts();
 
-	$self->{main_text} = eval { NormalizeText($p4->body_str) } || 'pdf';
+	$self->{main_text} = eval { NormalizeText($p4->decoded) } || 'pdf';
 	return $self->{main_text};
 }
 

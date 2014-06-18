@@ -1,0 +1,110 @@
+#!/usr/bin/perl
+use Getopt::Long;
+use Pod::Usage;
+use File::Slurp;
+use Mail::Message;
+use JSON::XS;
+
+my $maildir;
+my $userdir;
+my $watch;
+my $help;
+my $url;
+my $file;
+my $text;
+my $dir;
+my $interval;
+
+GetOptions(
+    "userdir=s" => \$userdir,
+    "file=s"    => \$file,
+    "interval=n"=> \$interval,
+    "dir=s"     => \$dir,
+    "text"      => \$text,
+    "server=s"  => \$url,
+    "watch"     => \$watch,
+	"help"      => \$help,
+) or pod2usage(2);
+pod2usage(1) if $help;
+
+$interval = 1000 unless $interval;
+die "Userdir or file must be specified" unless $userdir or $file;
+
+use FindBin qw($Bin);
+use lib "$Bin/lib";
+use Parser;
+
+if ($watch) {
+	Parser::Watch($userdir, $url, $interval);
+} else {
+	if ($file) {
+		open(my $fh, '<', $file) or die "Could not open $file";
+		my $mail = Mail::Message->read($fh);
+		my ($status, $data) = Parser::Parse($mail, 'dummy', $file, $url, $text);
+		print JSON::XS->new->canonical->pretty->encode($data);
+	} elsif ($dir) {
+		Parser::ParseDir($dir, 'dummy');
+	} else {
+		print "Did not do anything, specify -f -d or -w params. See parsemail -h for details\n";
+	}
+}
+
+__END__
+
+=head1 NAME
+
+parsemail - CLI for structured data out of emails
+
+=head1 SYNOPSIS 
+
+parsemail [options]
+
+Let use --help option to see brief help message.
+
+=head1 OPTIONS
+
+=over 8
+
+=item B<-m> B<--maildir>
+
+Directory containing cur,new,tmp
+
+=item B<-u>  B<--userdir>
+
+Directory where to store user Maildirs
+
+=item B<-d>  B<--dir>
+
+Directory to parse
+
+=item B<-f>  B<--file>
+
+File to parse
+
+=item B<-i>  B<--interval>
+
+Time in seconds after which to retry POST
+
+=item B<-t>  B<--text>
+
+Include email text in debug output
+
+=item B<-s>  B<--server>
+
+Directory where to store user Maildirs
+
+=item B<-w>  B<--watch>
+
+Flag if parsemail should keep running and watch for new mail
+
+=item B<-h>  B<-?>  B<--help>
+
+Print a brief help message and exit.
+
+=back
+
+=head1 DESCRIPTION
+
+B<parsemail> is CLI
+
+=cut

@@ -1,19 +1,19 @@
 ################################################################################
-#  Module: Futu::Format::KB
+#  Module: Format::KB
 ################################################################################
 #
 #	Module for parsing emails from KB
 #
 #-------------------------------------------------------------------------------
-package Futu::Format::KB;
+package Format::KB;
 
 use 5.008008;
 use strict;
 use warnings;
-use base 'Futu::Format';
-use Futu::Format qw/NormalizeText NormalizeAmount IBAN MatchTemplate/;
-use Futu::Const;
-use JSON;
+use base 'Format';
+use Format qw/NormalizeText NormalizeAmount IBAN MatchTemplate/;
+use Const;
+use JSON::XS;
 
 ################################################################################
 #	Group: Constructor
@@ -21,7 +21,7 @@ use JSON;
 
 #-------------------------------------------------------------------------------
 # Constructor: new
-#	Creates new Futu::Format::KB object
+#	Creates new Format::KB object
 #
 # Parameters:
 #	$email	- Email::MIME instance
@@ -70,8 +70,9 @@ sub Ignore {
 sub Balance_accounting_cz {
     my ($text) = @_;
 
-    my ( $account, $day, $month, $year, $available_balance ) =
-      MatchTemplate($text, "ucetni zustatek na beznem uctu cislo (.*) ke dni (\\d+)\\.(\\d+).(\\d+) .* je (.{1,12}) czk");
+    my ( $account, $day, $month, $year ) =
+      MatchTemplate($text, "ucetni zustatek na beznem uctu cislo ([^\\s]*) ke dni (\\d+)\\.(\\d+)\\.(\\d+) ");
+	my ($available_balance) = MatchTemplate($text, "je (.{1,12}) czk");
 	my ($overdraft) = MatchTemplate($text, "vcetne povoleneho debetu ve vysi (.*) je");
 
 	if ($overdraft) {
@@ -182,7 +183,7 @@ sub Card_cz {
         },
         my_account => IBAN('0100'),
         tags => {
-            how  => Futu::Const::HOW_PLATBA_KARTOU,
+            how  => Const::HOW_PLATBA_KARTOU,
             card => $card,
         }
     };
@@ -216,26 +217,26 @@ sub Payment_cz {
         if ( $sender_bank eq '0100' ) {
             $return->{my_account} = IBAN( $sender_bank, $sender_account ),
               $return->{amount} *= -1;
-            $return->{tags}{how} = Futu::Const::HOW_BEZHOTOVOSTNI_PLATBA
+            $return->{tags}{how} = Const::HOW_BEZHOTOVOSTNI_PLATBA
         }
         else {
             $return->{my_account} = IBAN( $receiver_bank, $receiver_account ),;
-            $return->{tags}{how} = Futu::Const::HOW_BEZHOTOVOSTNI_PRIJEM
+            $return->{tags}{how} = Const::HOW_BEZHOTOVOSTNI_PRIJEM
         }
     }
     else {
         if ( $sender_account eq '' ) {
-            $return->{tags}{how} = Futu::Const::HOW_VKLAD_NA_POBOCCE;
+            $return->{tags}{how} = Const::HOW_VKLAD_NA_POBOCCE;
             $return->{my_account} = IBAN( $receiver_bank, $receiver_account ),;
         }
         elsif ( $receiver_account eq '' ) {
-            $return->{tags}{how} = Futu::Const::HOW_VYBER_NA_POBOCCE;
+            $return->{tags}{how} = Const::HOW_VYBER_NA_POBOCCE;
             $return->{my_account} = IBAN( $sender_bank, $sender_account ),;
         }
         else {
 
             # amount needs to be verified against user's list of bank accounts
-            $return->{check}{amount} = JSON::true;
+            $return->{check}{amount} = JSON::XS::true;
         }
     }
 
@@ -250,7 +251,7 @@ sub _mainText {
 	return $self->{main_text} if defined $self->{main_text}; 
     my @parts = $self->{email}->parts;
 
-	$self->{main_text} = NormalizeText($parts[0]->body_str);
+	$self->{main_text} = NormalizeText($parts[0]->decoded);
 	return $self->{main_text};
 }
 

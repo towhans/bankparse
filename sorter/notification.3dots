@@ -1,0 +1,40 @@
+{
+    "receiver" : {
+        "bank"    : "0300|0100|...",
+        "country" : "CZ|...",
+        "number"  : Integer
+    },
+    "message_id" : String,
+    "date"       : {
+        "month" : Integer,
+        "day"   : Integer,
+        "year"  : Integer
+    },
+    "tags" : {
+        "how" :
+"HOW_VKLAD_NA_POBOCCE|HOW_VYBER_NA_POBOCCE|HOW_BEZHOTOVOSTNI_PRIJEM|HOW_BEZHOTOVOSTNI_PLATBA|HOW_BEZHOTOVOSTNI_PREVOD|HOW_PLATBA_KARTOU|HOW_VYBER_Z_BANKOMATU",
+
+            "card" => String,
+    },
+    "amount"    : Number,
+    "timestamp" : { "created_at" : "2014-06-06T08:55:54" },
+    "format"    : "CSOB.cz.universal|...",
+    "sender"    : {
+        "bank"    : "0300",
+        "country" : "CZ",
+        "number"  : "234497371"
+    },
+    "vs"         : Integer,
+    "my_account" : {
+        "bank"    : "0300|0100|...",
+        "country" : "CZ|...",
+        "number"  : Integer
+    },
+    "overdraft" : Number,
+    "balance"   : { "bank_accounting" : Number, "bank_available" : Number },
+	"oms"    : {
+		"city"    : String,
+		"country" : String,
+		"dealer"  : String
+	},
+}

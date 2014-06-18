@@ -1,17 +1,17 @@
 ################################################################################
-#  Module: Futu::Format::CS
+#  Module: Format::CS
 ################################################################################
 #
 #	Module for parsing emails from CS
 #
 #-------------------------------------------------------------------------------
-package Futu::Format::CS;
+package Format::CS;
 
 use 5.008008;
 use strict;
 use warnings;
-use base 'Futu::Format';
-use Futu::Format qw/NormalizeText NormalizeAmount IBAN MatchTemplate/;
+use base 'Format';
+use Format qw/NormalizeText NormalizeAmount IBAN MatchTemplate/;
 
 ################################################################################
 #	Group: Constructor
@@ -19,7 +19,7 @@ use Futu::Format qw/NormalizeText NormalizeAmount IBAN MatchTemplate/;
 
 #-------------------------------------------------------------------------------
 # Constructor: new
-#	Creates new Futu::Format::CS object
+#	Creates new Format::CS object
 #
 # Parameters:
 #	$email	- Email::MIME instance
@@ -81,7 +81,7 @@ sub _mainText {
 	return $self->{main_text} if defined $self->{main_text}; 
     my @parts = $self->{email}->parts;
 
-	$self->{main_text} = NormalizeText($parts[0]->body_str);
+	$self->{main_text} = NormalizeText($parts[0]->decoded);
 	return $self->{main_text};
 }
 

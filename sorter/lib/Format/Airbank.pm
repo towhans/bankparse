@@ -1,19 +1,18 @@
 ################################################################################
-#  Module: Futu::Format::KB
+#  Module: Format::KB
 ################################################################################
 #
 #	Module for parsing emails from KB
 #
 #-------------------------------------------------------------------------------
-package Futu::Format::Unicredit;
+package Format::Airbank;
 
 use 5.008008;
 use strict;
 use warnings;
-use base 'Futu::Format';
-use Futu::Format qw/NormalizeText NormalizeAmount IBAN MatchTemplate/;
-use Futu::Const;
-use JSON;
+use base 'Format';
+use Format qw/NormalizeText NormalizeAmount IBAN MatchTemplate/;
+use Const;
 
 ################################################################################
 #	Group: Constructor
@@ -21,7 +20,7 @@ use JSON;
 
 #-------------------------------------------------------------------------------
 # Constructor: new
-#	Creates new Futu::Format::KB object
+#	Creates new Format::KB object
 #
 # Parameters:
 #	$email	- Email::MIME instance
@@ -34,11 +33,14 @@ sub new {
     my $self = { email => $email };
 
     $self->{format} = {
-        'informuje o autorizaci karetni transakce'             => 'Unicredit.cz.card',
+
+        'na vasem uctu s nazvem' => 'Airbank.cz.balance',
+#        'u airbank se snizil o'  => 'Airbank.cz.payment_out',
+#        'u airbank se zvysil o'  => 'Airbank.cz.payment_in',
     };
 
     $self->{module} = {
-        'Unicredit.cz.card'    => \&Card_cz,
+        'Airbank.cz.balance'    => \&Balance_cz,
 	};
     return bless $self, $class;
 }
@@ -50,25 +52,26 @@ sub Ignore {
 	return undef;
 }
 
-
-
-sub Card_cz {
+sub Balance_cz {
     my ($text) = @_;
-    my ( $card, $day, $month, $year, $amount ) =
-      MatchTemplate($text, "cislo karty: (.*) dne: (\\d+)\\.(\\d+).(\\d+) \\d\\d:\\d\\d castka (.*) czk");
 
+    my ( $day, $month, $year, $name, $available_balance ) =
+      MatchTemplate($text, "dostupny zustatek ke dni (\\d+)\\.(\\d+).(\\d+) v ..:.. na vasem uctu s nazvem (.{1,30}) je (.{1,12}) czk\\.");
+
+    $available_balance = NormalizeAmount($available_balance);
+    
     my $return = {
         date => {
             day   => $day + 0,
             month => $month + 0,
             year  => $year + 0,
         },
-        amount => NormalizeAmount($amount) * -1,
-        my_account => IBAN('2700'),
-        tags => {
-            how  => Futu::Const::HOW_PLATBA_KARTOU,
-            card => $card,
-        }
+        balance => { bank_available => $available_balance },
+        my_account => {
+			country => 'CZ',
+			bank => '3030',
+			number => $name	
+		}
     };
     return [ $return ];
 }
@@ -81,7 +84,7 @@ sub _mainText {
 	return $self->{main_text} if defined $self->{main_text}; 
     my @parts = $self->{email}->parts;
 
-	$self->{main_text} = NormalizeText($parts[0]->body_str);
+	$self->{main_text} = NormalizeText($parts[0]->decoded);
 	return $self->{main_text};
 }
 

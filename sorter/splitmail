@@ -1,0 +1,75 @@
+#!/usr/bin/perl
+use Getopt::Long;
+use Pod::Usage;
+
+my $maildir;
+my $userdir;
+my $watch;
+my $help;
+
+GetOptions(
+    "maildir=s" => \$maildir,
+    "userdir=s" => \$userdir,
+    "watch"     => \$watch,
+	"help"      => \$help,
+) or pod2usage(2);
+pod2usage(1) if $help;
+
+die "Maildir not specified" unless $maildir;
+$userdir = './' unless $userdir;
+
+use FindBin qw($Bin);
+use lib "$Bin/lib";
+use Maildir::Split;
+
+if ($watch) {
+	Maildir::Split::Watch($maildir, $userdir, undef);
+} else {
+	my ($moved, $users, $unknown) = Maildir::Split::Split($maildir, $userdir, undef);
+	print "Moved $moved messages for $users users\n";
+	print "Messages with unknown recipient: $unknown\n" if $unknown > 0;
+}
+
+__END__
+
+=head1 NAME
+
+splitmail - CLI for splitting one Maildir into many Maildirs based on To: header
+
+=head1 SYNOPSIS 
+
+splitmail [options]
+
+Let use --help option to see brief help message.
+
+=head1 OPTIONS
+
+=over 8
+
+=item B<-m> B<--maildir>
+
+Directory containing cur,new,tmp
+
+=item B<-u>  B<--userdir>
+
+Directory where to store user Maildirs
+
+=item B<-w>  B<--watch>
+
+Flag if splitmail should keep running and watch for new mail
+
+=item B<-h>  B<-?>  B<--help>
+
+Print a brief help message and exit.
+
+=back
+
+=head1 DESCRIPTION
+
+B<splitmail> is CLI for Maildir::Split module to handle incomming email
+stored in Maildir format. Usually an application has some sort of
+domain basket set up to avoid the need to set up a system user for
+every application user just to receive mail. This script solves the
+problem by spliting the mail into user Maildirs. 
+
+=cut

@@ -1,20 +1,19 @@
 ################################################################################
-#  Module: Futu::Format::CSOB
+#  Module: Format::CSOB
 ################################################################################
 #
 #	Module for parsing emails from CSOB
 #
 #-------------------------------------------------------------------------------
-package Futu::Format::CSOB;
+package Format::CSOB;
 
 use 5.008008;
 use strict;
 use warnings;
-use Futu::Format qw/NormalizeText NormalizeAmount IBAN MatchTemplate/;
-use Futu::Const;
-use base 'Futu::Format';
+use Format qw/NormalizeText NormalizeAmount IBAN MatchTemplate/;
+use Const;
+use base 'Format';
 use utf8;
-use Futu::Mail;
 
 ################################################################################
 #	Group: Constructor
@@ -22,7 +21,7 @@ use Futu::Mail;
 
 #-------------------------------------------------------------------------------
 # Constructor: new
-#	Creates new Futu::Format::CSOB object
+#	Creates new Format::CSOB object
 #
 # Parameters:
 #	$email	- Email::MIME instance
@@ -122,12 +121,6 @@ sub Universal_cz {
 			push(@notifications, @$notif) if $notif;
 		} else {
 			push(@notifications, {format=>'CSOB.error'});
-			#Futu::Mail::SendMail(
-			#	'sovicka@futu.cz',
-			#	'Neznamy format dat',
-			#	$part,
-			#	'strix@futu.cz'
-			#);
 		}
 	}
 	return \@notifications;
@@ -183,7 +176,7 @@ sub Card_cz {
         amount     => NormalizeAmount($amount),
         my_account => IBAN( '0300',            $account ),
         tags => {
-            how  => Futu::Const::HOW_PLATBA_KARTOU
+            how  => Const::HOW_PLATBA_KARTOU
         }
     };
 	$return->{cashback} = NormalizeAmount($cashback) if $cashback;
@@ -193,7 +186,7 @@ sub Card_cz {
             dealer  => $dealer
         } if $city and $dealer;
 	$return->{tags}{card} = $card if $card;
-	$return->{tags}{how} = Futu::Const::HOW_BEZHOTOVOSTNI_PRIJEM if $vratka;
+	$return->{tags}{how} = Const::HOW_BEZHOTOVOSTNI_PRIJEM if $vratka;
 
     return [ $return ];
 }
@@ -212,7 +205,7 @@ sub Cash_withdrawal_cz {
         amount   => NormalizeAmount($amount),
         sender   => IBAN( '0300', $sender_account ),
         tags     => {
-            how => Futu::Const::HOW_VYBER_NA_POBOCCE
+            how => Const::HOW_VYBER_NA_POBOCCE
         },
         my_account => IBAN( '0300', $sender_account ),
         balance => {
@@ -243,8 +236,8 @@ sub Payment_out_zps_cz {
         tags     => {
 
             how => $receiver_account eq ''
-            ? Futu::Const::HOW_VYBER_NA_POBOCCE
-            : Futu::Const::HOW_BEZHOTOVOSTNI_PLATBA
+            ? Const::HOW_VYBER_NA_POBOCCE
+            : Const::HOW_BEZHOTOVOSTNI_PLATBA
         },
         my_account => IBAN( '0300', $sender_account ),
         vs         => $vs,
@@ -273,8 +266,8 @@ sub Payment_in_zps_cz {
         tags     => {
 
             how => $sender_account eq ''
-            ? Futu::Const::HOW_VKLAD_NA_POBOCCE
-            : Futu::Const::HOW_BEZHOTOVOSTNI_PRIJEM
+            ? Const::HOW_VKLAD_NA_POBOCCE
+            : Const::HOW_BEZHOTOVOSTNI_PRIJEM
         },
         my_account => IBAN( '0300', $receiver_account ),
         vs         => $vs,
@@ -301,7 +294,7 @@ sub Payment_out_cz {
         sender   => IBAN( '0300', $sender_account ),
         receiver => IBAN( $receiver_bank, $receiver_account ),
         tags     => {
-            how => Futu::Const::HOW_BEZHOTOVOSTNI_PLATBA
+            how => Const::HOW_BEZHOTOVOSTNI_PLATBA
         },
         my_account => IBAN( '0300', $sender_account ),
         vs         => $vs,
@@ -330,7 +323,7 @@ sub Deposit_cz {
         },
         tags     => {
 
-            how => Futu::Const::HOW_VKLAD_NA_POBOCCE
+            how => Const::HOW_VKLAD_NA_POBOCCE
         },
         my_account => IBAN( '0300', $receiver_account ),
     };
@@ -358,8 +351,8 @@ sub Payment_in_cz {
         tags     => {
 
             how => $sender_account eq ''
-            ? Futu::Const::HOW_VKLAD_NA_POBOCCE
-            : Futu::Const::HOW_BEZHOTOVOSTNI_PRIJEM
+            ? Const::HOW_VKLAD_NA_POBOCCE
+            : Const::HOW_BEZHOTOVOSTNI_PRIJEM
         },
         my_account => IBAN( '0300', $receiver_account ),
         vs         => $vs,
@@ -383,7 +376,7 @@ sub Due_cz {
         tags   => {
             regularity => 'měsíční',
             what => 'splatka',
-            how  => Futu::Const::HOW_BEZHOTOVOSTNI_PREVOD,
+            how  => Const::HOW_BEZHOTOVOSTNI_PREVOD,
         },
         my_account => IBAN( '0300', $account ),
     };
@@ -408,7 +401,7 @@ sub Fees_cz {
             regularity => 'měsíční',
             what => 'poplatky',
             whom => 'ČSOB',
-            how  => Futu::Const::HOW_BEZHOTOVOSTNI_PLATBA
+            how  => Const::HOW_BEZHOTOVOSTNI_PLATBA
         },
         balance => {
             bank_accounting => NormalizeAmount($balance),
@@ -431,10 +424,9 @@ sub _mainText {
 	return $self->{main_text} if defined $self->{main_text}; 
     my @parts = $self->{email}->parts;
 
-	$self->{main_text} = NormalizeText($parts[0]->body_str);
+	$self->{main_text} = NormalizeText($parts[0]->decoded);
 	#warn $self->{main_text};
 	return $self->{main_text};
 }
-
 
 1;	

@@ -1,20 +1,20 @@
 ################################################################################
-#  Module: Futu::Format::Raiffeisen
+#  Module: Format::Raiffeisen
 ################################################################################
 #
 #	Module for parsing emails from Raiffeisen
 #
 #-------------------------------------------------------------------------------
-package Futu::Format::Raiffeisen;
+package Format::Raiffeisen;
 
 use 5.008008;
 use strict;
 use warnings;
-use base 'Futu::Format';
-use Futu::Format qw/NormalizeCountry NormalizeText NormalizeAmount IBAN MatchTemplate/;
-use Futu::Const;
-use JSON;
-use Futu::Re;
+use base 'Format';
+use Format qw/NormalizeCountry NormalizeText NormalizeAmount IBAN MatchTemplate/;
+use Const;
+use Re;
+use JSON::XS;
 
 ################################################################################
 #	Group: Constructor
@@ -22,7 +22,7 @@ use Futu::Re;
 
 #-------------------------------------------------------------------------------
 # Constructor: new
-#	Creates new Futu::Format::Raiffeisen object
+#	Creates new Format::Raiffeisen object
 #
 # Parameters:
 #	$email	- Email::MIME instance
@@ -59,7 +59,7 @@ sub Balance_cz {
     my ( $balance, $sender, $receiver, $amount, $cur, $day, $month, $year ) =
       MatchTemplate(
         $text,
-"zmena zustatku stav uctu: (.*) z: (.*) na: (.*) realizovano: (.*) $Futu::Re::currency dne: (\\d+).(\\d+).(\\d+)"
+"zmena zustatku stav uctu: (.*) z: (.*) na: (.*) realizovano: (.*) $Re::currency dne: (\\d+).(\\d+).(\\d+)"
       );
 
     my ( $sender_account, $sender_bank ) = $sender =~ m/(.*)\/(.*)/;
@@ -116,7 +116,7 @@ sub Card_cz {
     my (
         $account, $bank, $card,   $amount, $currency, $day,
         $month,   $year 
-      ) = MatchTemplate($text, "z: (.*)\\/(.*) cislo karty (.*) castka: (.*) $Futu::Re::currency dne: (\\d+).(\\d+).(\\d+)");
+      ) = MatchTemplate($text, "z: (.*)\\/(.*) cislo karty (.*) castka: (.*) $Re::currency dne: (\\d+).(\\d+).(\\d+)");
 
 	my ($dealer, $city, $country) = MatchTemplate($text, "obchodnik: (.*) mesto: (.*) stat: (.*)");
 
@@ -129,7 +129,7 @@ sub Card_cz {
         amount => NormalizeAmount($amount),
         tags => {
             card   => $card,
-            how    => Futu::Const::HOW_PLATBA_KARTOU
+            how    => Const::HOW_PLATBA_KARTOU
         },
         sender     => IBAN( '5500', $account ),
         my_account => IBAN( '5500', $account ),
@@ -149,7 +149,7 @@ sub Payment_cz {
     my ($text) = @_;
 
     my ( $sender_account, $sender_bank, $receiver_account, $receiver_bank, $amount, $currency, $day, $month, $year  )
-      = MatchTemplate($text, "z: (.*)\\/(.*) na: (.*)\\/(.*) realizovano: (.*) $Futu::Re::currency dne: (\\d+).(\\d+).(\\d+)");
+      = MatchTemplate($text, "z: (.*)\\/(.*) na: (.*)\\/(.*) realizovano: (.*) $Re::currency dne: (\\d+).(\\d+).(\\d+)");
 
     my $return = {
         date => {
@@ -173,29 +173,29 @@ sub _DeductMyAccount {
     # if they differ then the one with 5500 code is my account
     if ( $sender_bank and $receiver_bank and $sender_bank ne $receiver_bank ) {
         if ( $sender_bank eq '5500' ) {
-            $return->{tags}{how} = Futu::Const::HOW_BEZHOTOVOSTNI_PLATBA;
+            $return->{tags}{how} = Const::HOW_BEZHOTOVOSTNI_PLATBA;
             $return->{my_account} = IBAN( $sender_bank, $sender_account ),
             $return->{amount} *= -1;
         }
         else {
-            $return->{tags}{how} = Futu::Const::HOW_BEZHOTOVOSTNI_PRIJEM;
+            $return->{tags}{how} = Const::HOW_BEZHOTOVOSTNI_PRIJEM;
             $return->{my_account} = IBAN( $receiver_bank, $receiver_account ),;
         }
     }
     else {
         if ( !$sender_account or $sender_account eq '' ) {
-            $return->{tags}{how} = Futu::Const::HOW_VKLAD_NA_POBOCCE;
+            $return->{tags}{how} = Const::HOW_VKLAD_NA_POBOCCE;
             $return->{my_account} = IBAN( $receiver_bank, $receiver_account ),;
         }
         elsif ( !$receiver_account or $receiver_account eq '' ) {
-            $return->{tags}{how} = Futu::Const::HOW_VYBER_NA_POBOCCE;
+            $return->{tags}{how} = Const::HOW_VYBER_NA_POBOCCE;
             $return->{my_account} = IBAN( $sender_bank, $sender_account ),;
             $return->{amount} *= -1;
         }
         else {
 
             # amount needs to be verified against user's list of bank accounts
-            $return->{check}{amount} = JSON::true;
+            $return->{check}{amount} = JSON::XS::true;
         }
     }
 }
@@ -206,29 +206,29 @@ sub _DeductDir {
     # if they differ then the one with 5500 code is my account
     if ( $sender_bank ne $receiver_bank ) {
         if ( $sender_bank eq '5500' ) {
-            $return->{tags}{how} = Futu::Const::HOW_BEZHOTOVOSTNI_PLATBA;
+            $return->{tags}{how} = Const::HOW_BEZHOTOVOSTNI_PLATBA;
             $return->{my_account} = IBAN( $sender_bank, $sender_account );
             $return->{amount} *= -1;
         }
         else {
-            $return->{tags}{how} = Futu::Const::HOW_BEZHOTOVOSTNI_PRIJEM;
+            $return->{tags}{how} = Const::HOW_BEZHOTOVOSTNI_PRIJEM;
             $return->{my_account} = IBAN( $receiver_bank, $receiver_account ),;
         }
     }
     else {
         if ( $sender_account eq '' ) {
-            $return->{tags}{how} = Futu::Const::HOW_VKLAD_NA_POBOCCE;
+            $return->{tags}{how} = Const::HOW_VKLAD_NA_POBOCCE;
             $return->{my_account} = IBAN( $receiver_bank, $receiver_account ),;
         }
         elsif ( $receiver_account eq '' ) {
-            $return->{tags}{how} = Futu::Const::HOW_VYBER_NA_POBOCCE;
+            $return->{tags}{how} = Const::HOW_VYBER_NA_POBOCCE;
             $return->{my_account} = IBAN( $sender_bank, $sender_account ),;
             $return->{amount} *= -1;
         }
         else {
 
             # amount needs to be verified against user's list of bank accounts
-            $return->{check}{amount} = JSON::true;
+            $return->{check}{amount} = JSON::XS::true;
         }
     }
 }
@@ -241,7 +241,7 @@ sub _mainText {
 	return $self->{main_text} if defined $self->{main_text}; 
     my @parts = $self->{email}->parts;
 
-	$self->{main_text} = NormalizeText($parts[0]->body_str);
+	$self->{main_text} = NormalizeText($parts[0]->decoded);
 	return $self->{main_text};
 }
 
